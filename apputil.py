@@ -3,7 +3,7 @@ import numpy as np
 
 class GroupEstimate:
     def __init__(self, estimate="mean"):
-        # Validate estimate type
+        # Strict validation
         if estimate not in ["mean", "median"]:
             raise ValueError("estimate must be either 'mean' or 'median'")
         self.estimate = estimate
@@ -15,37 +15,46 @@ class GroupEstimate:
         X: pandas DataFrame of categorical data
         y: 1D array-like of continuous values
         """
-        # Check matching lengths
+        # Convert to DataFrame and Series for safety
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("X must be a pandas DataFrame")
+        y = pd.Series(y)
+        
         if len(X) != len(y):
             raise ValueError("X and y must have the same length")
 
-        # Combine into single DataFrame
+        # Combine X and y into a single DataFrame
         df = X.copy()
-        df["y"] = y
+        df["__y__"] = y
 
-        # Remember which columns we grouped by
+        # Remember grouping columns
         self.group_cols = list(X.columns)
 
-        # Calculate group-wise mean or median
+        # Compute group estimate
         if self.estimate == "mean":
-            self.group_estimates = df.groupby(self.group_cols)["y"].mean().reset_index()
+            grouped = df.groupby(self.group_cols, dropna=False)["__y__"].mean()
         else:
-            self.group_estimates = df.groupby(self.group_cols)["y"].median().reset_index()
+            grouped = df.groupby(self.group_cols, dropna=False)["__y__"].median()
+
+        # Save as DataFrame for merge lookup
+        self.group_estimates = grouped.reset_index()
 
     def predict(self, X_):
         """
         X_: array-like or DataFrame of new categorical observations
+        Returns: numpy array of predicted estimates
         """
-        # Convert input to DataFrame if not already
+        # Convert input to DataFrame if needed
         if not isinstance(X_, pd.DataFrame):
             X_ = pd.DataFrame(X_, columns=self.group_cols)
 
-        # Merge new data with stored group estimates
+        # Merge with group estimates
         merged = pd.merge(X_, self.group_estimates, on=self.group_cols, how="left")
 
-        # Check missing predictions
-        missing_count = merged["y"].isna().sum()
+        # Count missing predictions
+        missing_count = merged["__y__"].isna().sum()
         if missing_count > 0:
             print(f"{missing_count} observation(s) belong to missing group(s). Returning NaN for those.")
 
-        return merged["y"].values
+        # Always return numpy array (not list)
+        return merged["__y__"].to_numpy()
