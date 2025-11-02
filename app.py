@@ -1,21 +1,19 @@
-import streamlit as st
+import pandas as pd
+from apputil import GroupEstimate
 
-from apputil import *
+# Example data
+X = pd.DataFrame({
+    "country": ["Guatemala", "Mexico", "Guatemala", "Mexico", "Ethiopia"],
+    "roast": ["Light", "Medium", "Light", "Dark", "Light"]
+})
+y = [88, 91, 89, 92, 94]
 
+# Create and fit model
+gm = GroupEstimate(estimate="mean")
+gm.fit(X, y)
 
-st.write(
-'''
-# Week x: [Title]
+# Predict on new samples
+X_new = [["Guatemala", "Light"], ["Mexico", "Medium"], ["Canada", "Dark"]]
+predictions = gm.predict(X_new)
 
-...
-''')
-
-# currently set for integer input
-amount = st.number_input("Exercise Input: ", 
-                         value=None, 
-                         step=1, 
-                         format="%d")
-
-if amount is not None:
-    st.write(f"The exercise input was {amount}.")
-
+print("Predictions:", predictions)
