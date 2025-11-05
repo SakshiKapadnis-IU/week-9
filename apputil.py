@@ -56,5 +56,5 @@ class GroupEstimate:
         if missing_count > 0:
             print(f"{missing_count} observation(s) belong to missing group(s). Returning NaN for those.")
 
-        # Always return numpy array (not list)
+        # Always return numpy array 
         return merged["__y__"].to_numpy()
